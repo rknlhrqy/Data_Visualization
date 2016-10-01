@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://dimplejs.org/dist/dimple.v2.0.0.min.js"></script>
+    
+    <style>
+
+      h2 {
+	      text-align: center;
+	      font-family: sans-serif;
+	      font-size: 34px;
+	      color: green;
+			}
+     
+    </style>
+
+    <script type="text/javascript">
+      function draw(data) {
+      
+        "use strict";
+        var margin = 75,
+            width = 1400 - margin,
+            height = 1200 - margin;
+
+				// Title of the bar chart
+	      d3.select("body")
+	        .append("h2")
+	        .text("Titanic Passenger Survival Rate (Percentage)"); 
+
+				// Create the chart area in the webpage
+        var svg = d3.select("body")
+          .append("svg")
+          .attr("width", width + margin)
+          .attr("height", height + margin)
+          .append('g')
+          .attr('class','chart');
+
+				// Clean up the age of the passengers
+				// transform it into several categories.
+	      var AgeRange = ["0-20", "21-40", "41-60", "60-"];
+	      data.forEach(function(c) {
+			    c["Real_Age"] = c["Age"];
+			    if (c["Age"] <= 20) {
+			      c["Age"] = AgeRange[0];
+			    }
+			    else if (c["Age"] > 20 && c["Age"] <= 40) {
+			      c["Age"] = AgeRange[1];
+			    }   
+			    else if (c["Age"] > 40 && c["Age"] <= 60) {
+			      c["Age"] = AgeRange[2];
+			    }   
+	        else if (c["Age"] > 60) {
+			      c["Age"] = AgeRange[3];
+			    }   
+			  });
+
+				// Define the format of the survival rate
+        var rate_format = d3.format(".4n")
+
+				// FIX-ME
+        function showPercent(d) {
+	        return d * 100 + "%";
+	      }
+
+				// Group the data based on Sex.
+        var nested = d3.nest()
+	        .key(function(d) {
+            return d['Sex'];
+	        })
+	        .rollup(function(leaves) {
+            var totalSurvived = d3.sum(leaves, function(d) {
+	            return d['Survived'];
+	          });
+	          var total = data.length;
+	          var rate = totalSurvived/total;
+	          return {
+	            'rate': rate_format(rate) * 100
+	          };
+	        })
+	        .entries(data)
+	        .sort(function(a,b) {return d3.ascending(a.key, b.key);});
+
+			  // Add a new value "rate" to the data
+				// This helps to draw bar chart.
+	      nested.forEach(function(c) {
+	        c.rate = c.values["rate"];
+	      });
+
+	      // Draw the bar chart
+        var myChart = new dimple.chart(svg, nested);
+	      myChart.setBounds(80, 80, "80%", "50%"); 
+        var x = myChart.addCategoryAxis("x", "key"); 
+        var y =myChart.addMeasureAxis("y", "rate");
+        y.tickFormat = ",.4f";
+	      x.ticks = 2;
+        myChart.addSeries(null, dimple.plot.bar);
+        myChart.draw(1000);
+
+	      // Group the data based on sex and a key such as pclass.
+				// This is to draw bar chart for different keys besides Sex.
+	      function get_data(key) {
+          var nested_data = d3.nest()
+            .key(function(d) {return d[key]; })
+            .key(function(d) { return d['Sex']; })
+	          .rollup(function(leaves) {
+              var totalSurvived = d3.sum(leaves, function(d) {
+  	            return d['Survived'];
+	            });
+              var totalKilled = d3.sum(leaves, function(d) {
+			          if (d['Survived'] == 0) {
+		              return 1;
+			          }else{
+			            return 0;
+			          }
+		          });
+
+		          var total = totalSurvived + totalKilled;
+		          var rate = totalSurvived/total;
+
+		          return {
+		            'rate': rate_format(rate) * 100
+		          };
+	          })
+	          .entries(data.filter(function(d) {return d[key] != "";}));
+
+	        nested_data.forEach(function(c){
+	          c.values.sort(function(a, b) {
+		          return d3.ascending(a.key, b.key); 
+		        });		    
+			    });
+
+	        nested_data.forEach(function(c) {
+		        c.values.forEach( function(d) {
+			        d["rate"] = d.values["rate"];
+		        });
+	        });
+
+	        return nested_data;
+	      }
+
+        //button width and height
+        var bWidth= 60; //button width
+        var bHeight= 25; //button height
+        var bSpace= 10; //space between buttons
+	      var bGap = 10; // Space between two lines of buttens
+        var x0= 80; //x offset
+        var y0= 80 + height * 0.6; //y offset
+
+				// Button colors
+	      var defaultColor= "#7777BB";
+	      var hoverColor= "#0000ff";
+	      var pressedColor= "#000077";
+
+				// Apply the colors when a button is clicked 
+	      function updateButtonColors(button, parent) {
+    	    parent.selectAll("rect")
+            .attr("fill",defaultColor)
+
+          button.select("rect")
+            .attr("fill",pressedColor)
+        }
+   
+				// Update the bar chart when a button is
+				// clicked or released.
+	      function button_ctrl(key, line){
+
+          //container for all buttons
+          var allButtons= svg.append("g")
+            .attr("id","allButtons"); 
+
+					// Collect all possible values of one key from data.
+					// If a key of the data is null, just ignore it.
+					// This will throw away a passengers' data when his
+					// age or embarkation port is null.
+	        var button_values = d3.set();
+          d3.nest()
+            .key(function(d) { return d['Sex']; })
+            .rollup(function(leaves) {
+              leaves.forEach(function(d) {
+	              button_values.add(d[key]);
+              })
+	          })
+	          .entries(data.filter(function(d) {return d[key] != "";}));
+
+          //groups for each button (which will hold a rect and text)
+          var buttonGroups= allButtons.selectAll("g.button")
+            .data(button_values.values())
+            .enter()
+            .append("g")
+            .attr("class","button")
+            .style("cursor","pointer")
+						// When button is clicked, bar chart is updated
+            .on("click",function(d,i) {
+              updateButtonColors(d3.select(this), d3.select(this.parentNode));
+	            var process_data = get_data(key);
+	            myChart.data = process_data[i].values;
+	            myChart.draw(1000);
+            })
+					  // When the cursor moves over a button, button's
+					  // color is changed.
+            .on("mouseover", function() {
+              if (d3.select(this).select("rect").attr("fill") != pressedColor) {
+                d3.select(this)
+                  .select("rect")
+                  .attr("fill",hoverColor);
+              }
+            })
+						//When the cursor moves away from a button, the button's
+						// color is udpated.
+            .on("mouseout", function() {
+              if (d3.select(this).select("rect").attr("fill") != pressedColor) {
+                d3.select(this)
+                  .select("rect")
+                  .attr("fill",defaultColor);
+              }
+            });
+
+	        //adding text to each button group
+	        buttonGroups.append("text")
+            .attr("class","buttonText")
+            .attr("font-family","FontAwesome")
+            .attr("x", x0)
+            .attr("y",y0+bHeight/2 + line * (bHeight + bGap))
+            .attr("text-anchor","middle")
+            .attr("dominant-baseline","central")
+            .attr("fill","green")
+            .text(key);
+
+
+	        //adding a rect to each button group
+	        //sidenote: rx and ry give the rects rounded corners
+	        buttonGroups.append("rect")
+            .attr("class","buttonRect")
+            .attr("width",bWidth)
+            .attr("height",bHeight)
+            .attr("x",function(d,i) {
+              return x0+(bWidth+bSpace)*(i + 2);
+            })
+            .attr("y",y0 + line * (bHeight + bGap))
+            .attr("rx",5) 
+            .attr("ry",5)
+            .attr("fill",defaultColor);
+
+
+	        //adding text to each button group,
+					// centered within the button rect
+	        buttonGroups.append("text")
+            .attr("class","buttonText")
+            .attr("font-family","FontAwesome")
+            .attr("x",function(d,i) {
+              return x0 + (bWidth+bSpace)*(i + 2) + bWidth/2;
+            })
+            .attr("y",y0+bHeight/2 + line * (bHeight + bGap))
+            .attr("text-anchor","middle")
+            .attr("dominant-baseline","central")
+            .attr("fill","white")
+            .text(function(d) {return d;});
+	      }
+				// Add buttons line by line
+	      button_ctrl('Pclass', 0);
+	      button_ctrl('SibSp', 1);
+	      button_ctrl('Embarked', 2);
+	      button_ctrl('Age', 3);
+      };
+
+    </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  /*
+    Use D3 (not dimple.js) to load the CSV file
+    and pass the contents of it to the draw function
+    */
+  d3.csv("titanic_data.csv", draw);
+  </script>
+</body>
+</html>
