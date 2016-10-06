@@ -15,8 +15,17 @@ Then it calls dimple.js function to create the bar chart of the survival rate of
 After that, the script creates the buttons under the bar chart.
 And the code will handle the action on the buttons, including clicking th ebutton, moving the curser over the button and moving the cursor away from the button.
 
+Conclusion:
+The bar chart shows that:
+1, Female passengers in first class has the highest survival rate, 96.81%.
+2, The more siblings or spouses the passenger has, less likely he/she survives.
+3, Passengers embarking at Port Q have highest survival rate.
+4, Female passengers who are older than 60 years all survive.
+
+
+
 Feedback:
-Not available. And waiting for the feedback.
+Not available. Posted on Udacity Forum. And waiting for the feedback. Up to now, no response.
 
 Resources:
 1, D3.js API documentation: https://github.com/d3/d3/blob/master/API.md#delimiter-separated-values-d3-dsv
