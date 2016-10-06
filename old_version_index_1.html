@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+    <style>
+    h2 {
+	text-align: center;
+    }
+    .chart rect {
+        fill: steelblue;
+    }
+    </style>
+    <script type="text/javascript">  
+    function draw(data) {
+	"use strict"
+        var margin = 75,
+	    width = 1400 - margin,
+	    height = 600 - margin;
+
+
+	d3.select("body")
+	    .append("h2")
+	    .text("Titanic Passenger Survival Rate");
+
+        var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin)
+            .attr("height", height + margin)
+            .append('g')
+            .attr('class','chart');
+
+        var rate_scale = d3.scale.linear()
+	    .range([height, margin])
+	    .domain([0, 1]);
+
+	var rate_axis = d3.svg.axis()
+	    .scale(rate_scale)
+	    .orient("left");
+
+	d3.select("svg")
+	    .append("g")
+	    .attr("class", "y axis")
+	    .attr("transform", "translate(" + margin + ", 0)")
+	    .call(rate_axis);
+
+	var nested = d3.nest()
+	    .key(function(d) {
+                return d['Sex'];
+	    })
+	    .rollup(function(leaves) {
+                var totalSurvived = d3.sum(leaves, function(d) {
+		    return d['Survived'];
+		});
+		debugger;
+		var total = data.length;
+		var rate = totalSurvived/total;
+
+		return {
+		    'rate': rate
+		};
+		
+	})
+	.entries(data);
+
+	var elementWidth = 240;
+	var category_scale = d3.scale.ordinal()
+	    .rangeRoundBands([0, elementWidth]);
+	    //.domain(nested);
+	debugger;
+	var category_axis = d3.svg.axis()
+	    .scale(category_scale)
+	    .orient("bottom");
+	debugger;
+	d3.select("svg")
+	    .append("g")
+	    .attr("class", "x axis")
+	    .attr("transform", "translate(" + margin + ", " + height + ")")
+	    .call(category_axis);
+
+
+	debugger;
+	var svg = d3.select(".chart")
+	    .attr("width", elementWidth)
+	    .attr("height", height);
+
+	var chart = svg.append("g");
+
+	debugger;
+	var b1 = chart.append("g.bar-group");
+	var b2 = b1
+	    .data(nested);
+	var b3 = b2
+            .enter();
+	var b4 = b3
+	    .append("g");
+        var bar = b4
+	    .attr("class", "bar-group");
+
+	debugger;
+	var bar_rect = bar.append("rect")
+	    .attr("y", height)
+	    .attr("width", elementWidth)
+	    .attr("height", 0)
+	    .attr("class", "bar")
+	    .transition()
+            .duration(1500)
+	    .attr("x", margin)
+	    .attr("y", function(d) {
+	        debugger;
+		/*if (d.key === "female") {*/
+		//return d.values["rate"];
+		return rate_scale(0.55);
+		/*}*/
+            })
+	    .attr("height", function(d) {
+	        //return height - d.values["rate"];
+	        return height - rate_scale(0.55);
+	    })
+	    .attr("textContent", function(d) { return d.values["rate"];});
+
+	    /*
+	debugger;
+	var bar_text = bar.append("text")
+	    .attr("x", margin)
+	    .attr("y", rate_scale - 10)
+	    .attr("dx", ".35em")
+	    .text(function(d) { return d["rate"];});
+*/
+	debugger;
+    };
+    </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  d3.csv("titanic_data.csv", draw);
+  </script>
+</body>
+</html>

@@ -54,3 +54,8 @@ Resources:
 2, Dimple.js documentation: http://dimplejs.org/
 
 3, I also looked through a lot of Dimple.js and D3.js examples about button creating and handling, which I am not able to list here. You can simply goodle them in the internet.
+
+Description of the files:
+1, older version of the files are: old_version_index_1.html, old_version_index_2.html, old_version_index_3.html, old_version_index_4.html
+2, snapshot of the first version: first_version_09252016.jpg
+3, snapshot of the final version: final_version_10052016.jpg

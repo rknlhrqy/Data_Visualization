@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="https://d3js.org/d3-timer.v1.min.js"></script>
+    <style>
+    h2 {
+	text-align: center;
+	font-family: sans-serif;
+	font-size: 34px;
+	color: green;
+    }
+    .chart rect {
+        fill: steelblue;
+	text-align: center;
+    }
+    div.PclassButtons {
+	position: absolute;
+	top: 300px;
+	left: 900px;
+
+	//margin-left: 700px;
+	//display: inline-block;
+        padding: 3px;
+	width: 75px;
+	height: 20px;
+        margin: 7px;
+	//background-color: teal;
+        background-color: rgb(251, 201, 127);
+	text-align: center;
+    }
+
+    .button {
+	display: block;
+	position: absolute;
+	top: 300px;
+	right: -90px;
+    }
+
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: black;
+        shape-rendering: crispEdges;
+    }
+
+    .axis text {
+        font-family: sans-serif;
+        font-size: 11px;
+    }
+
+    </style>
+    <script type="text/javascript">  
+    function draw(data) {
+	"use strict"
+	var margin = 100;
+	var totalWidth = 1300;
+	var totalHeight = 600;
+	var padding = 50;
+        var barWidth = totalWidth/6;
+
+	d3.select("body")
+	    .append("h2")
+	    .text("Titanic Passenger Survival Rate");
+
+        var svg = d3.select('body')
+	    .append('svg')
+	    .attr('width', totalWidth + margin)
+	    .attr('height', totalHeight + margin);
+
+	svg.append('g').attr("id", "text_id");
+	svg.append('g').attr("id", "bar_id");
+
+        svg.append('g')
+	    .attr('class', 'chart')
+	    .attr("transform", "translate(" + (margin  + padding + 20) + "," + padding + ")");
+
+	var scale = {
+	    x: d3.scale.ordinal(),
+	    y: d3.scale.linear()
+	};
+
+	var y_scale = scale.y.domain([0, 1]).range([totalHeight, 0]);
+	var x_scale = scale.x.domain(["Female", "Male"]).rangeBands([0, barWidth * 2 + padding], .1);
+	// Y-axis
+        svg.append("label")
+            .attr("transform", "rotate(-90)")
+            .attr("x", margin/2)
+            .attr("y", totalHeight / 2)
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text("Survival Rate");
+	var formatAsPercentage = d3.format(",%");
+	svg.append("g")
+            .attr("class", "axis")
+            .attr("transform", "translate(" + (margin + padding )+ "," + padding + ")")
+            .call(d3.svg.axis()
+                .scale(y_scale)
+                .orient("left")
+		.ticks(20)
+	        .tickFormat(formatAsPercentage));
+
+	// X-axis
+	svg.append("g")
+            .attr("class", "axis")
+            .attr("transform", "translate(" + (margin + padding )+ "," + (totalHeight + padding) + ")")
+            .call(d3.svg.axis()
+                .scale(x_scale)
+                .orient("bottom"));
+
+
+
+       
+	var nested = d3.nest()
+	    .key(function(d) {
+                return d['Sex'];
+	    })
+	    .rollup(function(leaves) {
+                var totalSurvived = d3.sum(leaves, function(d) {
+		    return d['Survived'];
+		});
+		var total = data.length;
+		var rate = totalSurvived/total;
+
+		return {
+		    'rate': rate
+		};
+		
+	})
+	.entries(data)
+	.sort(function(a,b) {return d3.ascending(a.key, b.key);});
+	debugger;
+
+
+	function removeCurrent(bar_rect, label_text) {
+	    label_text.attr({'x': function (d, i) {
+                                 return i * barWidth + barWidth/4;
+                            },
+                             'width': barWidth - 1,
+		             'y': function(d) {
+		                 return y_scale(d.values['rate']) + 20;
+		            },
+		             'height': function(d) {
+		                 return totalHeight - y_scale(d.values['rate']);
+		            }
+                })
+                .attr("fill", "yellow")
+                .transition()
+                .duration(2000)
+                .attr({'x': function (d, i) {
+                            return i * barWidth + barWidth/4;
+                      },
+                       'width': barWidth - 1,
+		       'y': totalHeight + 20,
+                       'height': totalHeight
+                      })
+	        .attr("font-family", "sans-serif")
+                .attr("font-size", "20px")
+//	        .style("fill", "steelblue")
+//                .transition()
+//                .duration(500)
+	        .style("fill", "white");
+
+            //label_text.exit().remove();
+
+            bar_rect.attr({'x': function (d, i) {
+                               return i * barWidth;
+                          },
+                           'width': barWidth - 1,
+		           'y': function(d) {
+		               return y_scale(d.values['rate']);
+		          },
+		           'height': function(d) {
+		               return totalHeight - y_scale(d.values['rate']);
+		          }
+                })
+                .transition()
+                .duration(2000)
+                .attr({'x': function (d, i) {
+                           return i * barWidth;
+                      },
+                       'width': barWidth - 1,
+		       'y': totalHeight,
+                       'height': totalHeight
+                })
+	        .style("fill", "white");
+	    //bar_rect.exit().remove();
+	}
+
+
+	function buildNew(bar_rect, label_text) {
+
+            bar_rect.attr({'x': function (d, i) {
+                               return i * barWidth;
+                          },
+                           'width': barWidth - 1,
+		           'y': totalHeight,
+                           'height': totalHeight
+	        })
+                //.style("fill", "white")
+                .transition()
+                .duration(2000)
+                .attr({'x': function (d, i) {
+                           return i * barWidth;
+                      },
+                       'width': barWidth - 1,
+		       'y': function(d) {
+		           return y_scale(d.values['rate']);
+		      },
+		       'height': function(d) {
+		           return totalHeight - y_scale(d.values['rate']);
+		      }
+                })
+                .style("fill", "steelblue");
+
+
+            label_text.attr({'x': function (d, i) {
+                                 return i * barWidth + barWidth/4;
+                            },
+                             'width': barWidth - 1,
+		             'y': totalHeight + 20,
+                             'height': totalHeight
+	        })
+                //.attr("fill", "white")
+                .transition()
+                .duration(2000)
+                .attr({'x': function (d, i) {
+                           return i * barWidth + barWidth/4;
+                      },
+                       'width': barWidth - 1,
+		       'y': function(d) {
+		           return y_scale(d.values['rate']) + 20;
+		      },
+		       'height': function(d) {
+		           return totalHeight - y_scale(d.values['rate']);
+		      }
+                })
+	        .attr("font-family", "sans-serif")
+                .attr("font-size", "20px")
+                .attr("fill", "yellow");
+        }
+
+	// Bar
+        var chart = d3.select('.chart')
+            .attr({
+                'width': totalWidth/2,
+                'height': totalHeight
+            });
+        
+        var chart_bar = chart
+            .selectAll('g');
+/*	
+        var chart_bar = svg.select("#bar_id").select('.chart')	
+            .attr({
+                'width': totalWidth/2,
+                'height': totalHeight
+            });
+*/
+	var bars = chart_bar
+            .data(nested)
+            .enter()
+            .append('g')
+	    .append('rect');
+
+	// Text on Bar
+	var text_format = d3.format(",.2%");
+/*
+        var chart_text = svg.select("#text_id").select('.chart')	
+            .attr({
+                'width': totalWidth/2,
+                'height': totalHeight
+            })
+	    .selectAll('text');
+	    */
+
+	var chart_text = chart.selectAll('text');
+        var label = chart_text
+	    .data(nested)
+	    .enter()
+	    .append('text')
+	    .text(function(d) { return text_format(d.values["rate"]);});
+
+	buildNew(bars, label);
+
+	// Buttons
+	var Pclass_values = d3.set();
+	var Age_values = d3.set();
+	var SibSp_values = d3.set();
+	var Parch_values = d3.set();
+	var Embarked_values = d3.set();
+
+        d3.nest()
+            .key(function(d) { return d['Sex']; })
+            .rollup(function(leaves) {
+		leaves.forEach(function(d) {
+		    Pclass_values.add(d['Pclass']);
+		    Age_values.add(d['Age']);
+		    SibSp_values.add(d['SibSp']);
+		    Parch_values.add(d['Parch']);
+		    Embarked_values.add(d['Embarked']);
+		})
+	    })
+	    .entries(data);
+
+
+	// Get data of sex + another key such as pclass.
+	function get_data(key) {
+       	    var nested_data = d3.nest()
+                .key(function(d) { return d[key]; })
+                .key(function(d) { return d['Sex']; })
+	        .rollup(function(leaves) {
+                    var totalSurvived = d3.sum(leaves, function(d) {
+		        return d['Survived'];
+		    });
+                    var totalKilled = d3.sum(leaves, function(d) {
+			if (d['Survived'] == 0) {
+		            return 1;
+			}else{
+			    return 0;
+			}
+		    });
+
+		    var total = totalSurvived + totalKilled;
+		    var rate = totalSurvived/total;
+
+		    return {
+		        'rate': rate
+		    };
+	        })
+	        .entries(data)
+	        .sort(function(a,b) {return d3.ascending(a.values.key, b.values.key);});
+	        return nested_data;
+	}
+
+
+        function f() {
+	    return true;
+        }
+
+        //button width and height
+        var bWidth= 40; //button width
+        var bHeight= 25; //button height
+        var bSpace= 10; //space between buttons
+        var x0= 20; //x offset
+        var y0= 10; //y offset
+
+	var defaultColor= "#7777BB";
+	var hoverColor= "#0000ff";
+	var pressedColor= "#000077";
+       
+	function updateButtonColors(button, parent) {
+    	    parent.selectAll("rect")
+            .attr("fill",defaultColor)
+
+            button.select("rect")
+            .attr("fill",pressedColor)
+        }
+   
+        //container for all buttons
+        var allButtons= svg.append("g")
+            .attr("id","allButtons"); 
+
+        //groups for each button (which will hold a rect and text)
+        var buttonGroups= allButtons.selectAll("g.button")
+            .data(Pclass_values.values())
+            .enter()
+            .append("g")
+            .attr("class","button")
+            .style("cursor","pointer")
+            .on("click",function(d,i) {
+                updateButtonColors(d3.select(this), d3.select(this.parentNode));
+	        var pclass_data = get_data('Pclass');
+		debugger;
+	        removeCurrent(bars, label);
+
+		d3.timer(f, 2000);
+
+		//chart_bar = chart
+                //    .selectAll('g');
+
+                bars = chart_bar
+                    .data(pclass_data[i].values)
+                    .enter()
+                    .append('g')
+	            .append('rect');
+
+
+	        //chart_text = chart.selectAll('text');
+	        label = chart_text
+	            .data(pclass_data[i].values)
+	            .enter()
+	            .append('text')
+		    .append('g')
+	            .text(function(d) { return text_format(d.values["rate"]);});
+
+
+	        buildNew(bars, label);
+
+            })
+            .on("mouseover", function() {
+                if (d3.select(this).select("rect").attr("fill") != pressedColor) {
+                    d3.select(this)
+                        .select("rect")
+                        .attr("fill",hoverColor);
+                }
+            })
+            .on("mouseout", function() {
+                if (d3.select(this).select("rect").attr("fill") != pressedColor) {
+                    d3.select(this)
+                        .select("rect")
+                        .attr("fill",defaultColor);
+                }
+            });
+
+	//adding a rect to each button group
+	//sidenote: rx and ry give the rects rounded corners
+	buttonGroups.append("rect")
+            .attr("class","buttonRect")
+            .attr("width",bWidth)
+            .attr("height",bHeight)
+            .attr("x",function(d,i) {
+                return x0+(bWidth+bSpace)*i;
+            })
+            .attr("y",y0)
+            .attr("rx",5) 
+            .attr("ry",5)
+            .attr("fill",defaultColor);
+
+
+	//adding text to each button group, centered within the button rect
+	buttonGroups.append("text")
+            .attr("class","buttonText")
+            .attr("font-family","FontAwesome")
+            .attr("x",function(d,i) {
+                return x0 + (bWidth+bSpace)*i + bWidth/2;
+            })
+            .attr("y",y0+bHeight/2)
+            .attr("text-anchor","middle")
+            .attr("dominant-baseline","central")
+            .attr("fill","white")
+            .text(function(d) {return d;});
+
+    };
+    </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  d3.csv("titanic_data.csv", draw);
+  </script>
+</body>
+</html>
